@@ -187,7 +187,22 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&l
 function imageUrl(src){
   let s=String(src||'').trim(); if(!s)return '';
   if(/^data:/i.test(s))return s;
-  if(/^https?:\/\//i.test(s)) return s;
+  // When the customer page is HTTPS, never return an HTTP image URL.
+  // Local/IP image URLs (127.0.0.1, localhost, LAN IPs) are rewritten to
+  // the configured HTTPS Customer API while keeping the original path.
+  if(/^https?:\/\//i.test(s)){
+    try{
+      const u=new URL(s);
+      const localHost=/^(localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})$/i.test(u.hostname);
+      if(location.protocol==='https:' && u.protocol==='http:' && localHost){
+        return API+u.pathname+u.search+u.hash;
+      }
+      if(location.protocol==='https:' && u.protocol==='http:'){
+        return API+u.pathname+u.search+u.hash;
+      }
+      return s;
+    }catch(e){ return s; }
+  }
   if(s.startsWith('//'))return location.protocol+s;
   if(!s.startsWith('/'))s='/'+s;
   return API+s;
@@ -483,7 +498,7 @@ async function sendWaiterCall(t){
 function openConnection(){} function saveConnection(){} function clearConnection(){} async function testConnection(){}
 $('search').addEventListener('input',()=>{currentCategory='ALL';renderCategories();renderMenu()});
 $('sectionSelect').value='indoor';
-window.selectCategory=selectCategory;window.openHistory=openHistory;window.loadAll=loadAll;window.chooseOrderType=chooseOrderType;window.callWaiter=callWaiter;window.openCart=openCart;window.openCheckout=openCheckout;window.placeOrder=placeOrder;window.closeModal=closeModal;window.closeIfOutside=closeIfOutside;window.changeQty=changeQty;window.removeCart=removeCart;window.openItem=openItem;window.addToCart=addToCart;window.addDetailed=addDetailed;window.selectTable=selectTable;window.renderTables=renderTables;window.viewOrder=viewOrder;window.fallbackImage=fallbackImage;
+window.selectCategory=selectCategory;window.openHistory=openHistory;window.loadAll=loadAll;window.chooseOrderType=chooseOrderType;window.callWaiter=callWaiter;window.openCart=openCart;window.openCheckout=openCheckout;window.placeOrder=placeOrder;window.closeModal=closeModal;window.closeIfOutside=closeIfOutside;window.changeQty=changeQty;window.removeCart=removeCart;window.openItem=openItem;window.addToCart=addToCart;window.addDetailed=addDetailed;window.selectTable=selectTable;window.renderTables=renderTables;window.selectWaiterTable=selectWaiterTable;window.viewOrder=viewOrder;window.fallbackImage=fallbackImage;
 (function restoreSavedTable(){
   const t=localStorage.getItem('hameeds_table')||'';
   if(/^([ABC])([1-9]|[12][0-9]|30)$/.test(t)){tableId=t;section=t[0]==='A'?'indoor':t[0]==='B'?'outdoor':'first_floor';orderType='dine_in';$('orderTypeBox').classList.add('hidden');showTableInfo();}
