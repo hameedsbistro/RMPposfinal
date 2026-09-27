@@ -233,7 +233,7 @@ async function tableData(table, opts={}){
     mode:opts.mode||null,
     return_rows:true
   };
-  const j=await apiFetch('/api/data',{method:'POST',body:payload});
+  const j=await apiFetch('/api/data',{method:'POST',body:JSON.stringify(payload)});
   return Array.isArray(j.data)?j.data:[];
 }
 async function loadSchedules(){
