@@ -249,7 +249,14 @@ async function tableData(table, opts={}){
     return_rows:true
   };
   const j=await apiFetch('/api/data',{method:'POST',body:JSON.stringify(payload)});
-  return Array.isArray(j.data)?j.data:[];
+  // Accept common SELECT response wrappers without changing the API contract.
+  if(Array.isArray(j)) return j;
+  if(Array.isArray(j.data)) return j.data;
+  if(Array.isArray(j.rows)) return j.rows;
+  if(Array.isArray(j.result)) return j.result;
+  if(Array.isArray(j.data?.rows)) return j.data.rows;
+  if(Array.isArray(j.data?.data)) return j.data.data;
+  return [];
 }
 async function loadSchedules(){
   const empty={groups:[],slots:[],catTags:[],itemTags:[],legacy:[]};
@@ -274,7 +281,9 @@ async function loadAll(force=false){
     // This is the same WAMP/MySQL bridge used by the original customer page:
     // Customer -> restricted HTTPS API (8788) -> /api/data -> WAMP/MySQL.
     const rows=await tableData('menu_items');
-    menu=rows.filter(x=>Number(x.is_available??1)!==0);
+    // Keep every DB row in memory. Only an explicit is_available=0/false hides it.
+    menu=rows.filter(x=>!(x && (x.is_available===0 || x.is_available===false || String(x.is_available).trim()==='0')));
+    console.info('[Customer Menu] menu_items rows:',rows.length,'displayable:',menu.length);
     try{await loadSchedules()}catch(_){}
     categories=[...new Set(menu.map(x=>String(x.category||'Uncategorized').trim()||'Uncategorized'))];
     renderCategories();renderMenu();
